@@ -1,4 +1,4 @@
-package com.jike.jiangke.jokes;
+package com.jike.jiangke.jokes.model;
 
 /**
  * 描述笑话的类

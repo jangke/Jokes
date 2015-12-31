@@ -1,134 +1,124 @@
 package com.jike.jiangke.jokes;
 
-import android.os.Handler;
-import android.os.Message;
+
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 
-import android.widget.BaseAdapter;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
+import com.jike.jiangke.jokes.fragment.ListFragment;
+import com.jike.jiangke.jokes.model.JokePost;
+import com.jike.jiangke.jokes.utils.Utils;
 
-import com.jike.jiangke.jokes.view.RefreshableView;
-
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * 主actiivity
+ */
 public class MainActivity extends AppCompatActivity {
-    public static final String TAG = "MainActivity";
-    RefreshableView refreshableView;
-    ListView listView;
-    MyAdapter adapter;
-    List<JokePost> jokePosts;
-    Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            Log.d(MainActivity.TAG, jokePosts.size() + "");
-        }
-    };
-
+    //listFragment显示的view其中包含下拉刷新控件保存在Activity中，是为了重建时恢复数据
+    private View view;
+    private List<JokePost> list;
+    //保存listFragment点击的条目位置，方便在ContentFragment中获取
+    private int currentPostion;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         initdata();
         initView();
-        initListener();
-    }
-
-    private void initdata() {
-        jokePosts = new ArrayList<>();
-
+        getFragmentManager().beginTransaction().add(R.id.content, new ListFragment()).commit();
 
     }
 
-    /**
-     * 初始化下拉刷新控件的回调监听
-     */
-    private void initListener() {
-        refreshableView.setOnRefreshListener(new RefreshableView.PullToRefreshListener() {
-            @Override
-            public void onRefresh() {
-                Utils.handleResponse(jokePosts, handler);
-                refreshableView.finishRefreshing();
-            }
-        }, 0);
-    }
-
-    /**
-     * 初始化控件
-     */
+    //初始化View，显示Activity内容
     private void initView() {
-        setContentView(R.layout.activity_main);
-        refreshableView = (RefreshableView) findViewById(R.id.refreshable_view);
-        listView = (ListView) findViewById(R.id.list_view);
-        adapter = new MyAdapter();
-        listView.setAdapter(adapter);
+        setContentView(R.layout.main_layout);
+        view = View.inflate(this, R.layout.list_fragment, null);
+
     }
 
-    class MyAdapter extends BaseAdapter {
-
-        @Override
-        public int getCount() {
-            return jokePosts.size();
+    //创建保存文章的集合
+    private void initdata() {
+        list = new ArrayList<>();
+        String content = getContentFromCache();
+        if (content != null) {
+            Log.d("MainActivity", "读取缓存成功");
+            Utils.parseJSONWithJSONObject(content, list);
         }
+    }
 
-        @Override
-        public Object getItem(int position) {
-            return null;
-        }
+    public int getCurrentPostion() {
+        return currentPostion;
+    }
 
-        @Override
-        public long getItemId(int position) {
-            return 0;
-        }
+    public void setCurrentPostion(int currentPostion) {
+        this.currentPostion = currentPostion;
+    }
 
-        /**
-         * 填充子View
-         *
-         * @param position
-         * @param convertView
-         * @param parent
-         * @return
-         */
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            View view = null;
-            ViewHoder viewHoder = null;
-            if (convertView != null) {
-                view = convertView;
-                viewHoder = (ViewHoder) view.getTag();
-            } else {
-                view = View.inflate(MainActivity.this, R.layout.list_item, null);
-                viewHoder = new ViewHoder();
-                viewHoder.tv_title = (TextView) view.findViewById(R.id.tv_title);
-                viewHoder.tv_updatetime = (TextView) view.findViewById(R.id.tv_updatetime);
-                viewHoder.iv_topost = (ImageView) view.findViewById(R.id.iv_topost);
-                view.setTag(viewHoder);
-            }
-            viewHoder.tv_title.setText(jokePosts.get(position).getPost_title());
-            viewHoder.tv_updatetime.setText(jokePosts.get(position).getPost_date());
-            viewHoder.iv_topost.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Toast.makeText(MainActivity.this, "嗲了那牛", Toast.LENGTH_SHORT).show();
+    public View getView() {
+        return view;
+    }
+
+    public void setView(View view) {
+        this.view = view;
+    }
+
+    public List<JokePost> getList() {
+        return list;
+    }
+
+    public void setList(List<JokePost> list) {
+        this.list = list;
+    }
+
+    /**
+     * 如果有缓存文件从缓存文件中获取数据
+     *
+     * @return
+     */
+    private String getContentFromCache() {
+
+        String content = null;
+        File file = new File(getCacheDir(), Utils.CACHE_NAME);
+        if (file.exists()) {
+            BufferedReader reader = null;
+            String line = null;
+            StringBuilder builder = new StringBuilder();
+            try {
+                reader = new BufferedReader(new FileReader(file));
+                while ((line = reader.readLine()) != null) {
+                    builder.append(line);
                 }
-            });
-
-            return view;
+                content = builder.toString();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
         }
-
-        class ViewHoder {
-            public TextView tv_title;
-            public TextView tv_updatetime;
-            public ImageView iv_topost;
-        }
+        return content;
     }
 
+    /**
+     * 重写onBackPressed()判断fragment返回栈中是否有内容
+     */
+    @Override
+    public void onBackPressed() {
+        if(getFragmentManager().getBackStackEntryCount()>0){
+            getFragmentManager().popBackStackImmediate();
+        }else {
+            super.onBackPressed();
+        }
+    }
 }

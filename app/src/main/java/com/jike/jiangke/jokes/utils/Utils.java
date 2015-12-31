@@ -1,22 +1,23 @@
-package com.jike.jiangke.jokes;
+package com.jike.jiangke.jokes.utils;
 
-import android.util.Log;
 import android.os.Handler;
-import com.lidroid.xutils.HttpUtils;
-import com.lidroid.xutils.exception.HttpException;
-import com.lidroid.xutils.http.ResponseInfo;
-import com.lidroid.xutils.http.callback.RequestCallBack;
-import com.lidroid.xutils.http.client.HttpRequest;
+import android.util.Log;
+
+import com.jike.jiangke.jokes.MyApplication;
+import com.jike.jiangke.jokes.model.JokePost;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
@@ -25,6 +26,7 @@ import java.util.List;
  * 提供获取网络数据，进行缓存的工具类
  */
 public class Utils {
+    public static final String CACHE_NAME="cache.txt";
 
     /**
      * 解析服务器返回的数据
@@ -32,24 +34,6 @@ public class Utils {
      * @param list 解析出来的数据存入集合
      */
     public static void handleResponse(final List<JokePost> list, final Handler handler) {
-//        HttpUtils httpUtils = new HttpUtils();
-//
-//        httpUtils.send(HttpRequest.HttpMethod.GET, "http://jikejiangke123.sinaapp.com/latestposts.php",
-//                new RequestCallBack<String>() {
-//                    @Override
-//                    public void onSuccess(ResponseInfo<String> responseInfo) {
-//                        String res = responseInfo.result;
-//                        Log.d("MainActivity", res);
-//                        parseJSONWithJSONObject(res, list);
-//                        handler.sendEmptyMessage(0);
-//
-//                    }
-//
-//                    @Override
-//                    public void onFailure(HttpException e, String s) {
-//                        Log.d("MainActivity", s);
-//                    }
-//                });
         HttpURLConnection connection =null;
 
         try {
@@ -68,11 +52,48 @@ public class Utils {
                 builder.append(line);
             }
             parseJSONWithJSONObject(builder.toString(),list);
+            writeContentToCache(builder.toString());
             handler.sendEmptyMessage(0);
 
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * 把从服务器或的的数据写入缓存
+     * @param content
+     */
+
+    private static void writeContentToCache(String content) {
+
+        File file = new File(MyApplication.getContext().getCacheDir(), Utils.CACHE_NAME);
+        if(file.exists()){
+            file.delete();
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        BufferedWriter writer=null;
+        try {
+            writer=new BufferedWriter(new FileWriter(file));
+            writer.write(content);
+            writer.flush();
+            Log.d("MainActivity","缓存成功");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if(writer!=null){
+                try {
+                    writer.close();
+                } catch (IOException e) {
+
+
+                }
+            }
         }
     }
 
