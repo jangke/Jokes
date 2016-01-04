@@ -131,7 +131,7 @@ public class ListFragment extends Fragment {
                 view = convertView;
                 viewHoder = (ViewHoder) view.getTag();
             } else {
-                view = View.inflate(getContext(), R.layout.list_item, null);
+                view = View.inflate(activity, R.layout.list_item, null);
                 viewHoder = new ViewHoder();
                 viewHoder.tv_title = (TextView) view.findViewById(R.id.tv_title);
                 viewHoder.tv_updatetime = (TextView) view.findViewById(R.id.tv_updatetime);
